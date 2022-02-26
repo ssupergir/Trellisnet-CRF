@@ -1,0 +1,676 @@
+{% extends "navigate.html" %} {% block mainbody %}
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title></title>
+    <meta charset="utf-8" />
+    <script src="/static/js/echarts.common.min.js"></script>
+    <script type="text/javascript" src="/static/js/echarts-all-3.js"></script>
+</head>
+<title>专家查询</title>
+<div class="container">
+    <div class="row">
+    <!--head start-->
+    <div class="col-md-12">
+        <h3 class="page-header"><i class="fa fa-share-alt" aria-hidden="true"></i> 专家查询 </h3>
+            <ol class="breadcrumb">
+                <li><i class="fa fa-home"></i><a href="\">主页</a></li>
+                <li><i class="fa fa-share-alt" aria-hidden="true"></i>{{ user_text }}图谱</li>
+            </ol>
+    </div>
+    <p>
+        <div class = "col-md-12">
+            {% if ctx %}
+                <div class="panel panel-default">
+                    <header class ="panel-heading">
+                        <div class = "panel-body">
+                            <h2>数据库中暂未添加该实体</h2>
+                        </div>
+                    </header>
+                </div>
+            {% endif %}
+        </div>
+    </p>
+<!--实体关系查询-->
+{% if entityRelation %}
+    <!-- Echart Dom对象（实体关系） -->
+    <div class = "col-md-12">
+        <div class="panel panel-default ">
+            <header class="panel-heading">
+                关系图 :
+            </header>
+            <div class = "panel-body ">
+                <div id="graph" style="width: 90%;height:600px;"></div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+{% if cooRelation %}
+    <!-- Echart Dom对象（实体关系） -->
+    <div class = "col-md-12">
+        <div class="panel panel-default ">
+            <header class="panel-heading">
+                相关人员关系图 :
+            </header>
+            <div class = "panel-body ">
+                <div id="graph1" style="width: 90%;height:600px;"></div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% if paperRelation %}
+    <!-- Echart Dom对象（实体关系） -->
+    <div class = "col-md-12">
+        <div class="panel panel-default ">
+            <header class="panel-heading">
+                论文关系图 :
+            </header>
+            <div class = "panel-body ">
+                <div id="graph2" style="width: 90%;height:600px;"></div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% if entityRelation %}
+<div class = "col-md-12">
+    <div class="panel panel-default">
+    <header class="panel-heading">
+        关系列表 :
+    </header>
+        <div class = "panel-body">
+            <table class = "table" data-paging =  "true" data-sorting="true"></table>
+        </div>
+    </div>
+</div>
+{% endif %}
+</div>
+</div>
+{% if entityRelation %}
+<script src="/static/js/jquery.min.js"></script>
+<script type="text/javascript">
+        // 基于查询结果：初始化Data和Links列表，用于Echarts可视化输出
+        var ctx = [ {{ ctx|safe }} ] ;
+        //{entity2,rel}
+        var entityRelation = [ {{ entityRelation|safe }} ] ;
+        var cooRelation = [ {{ cooRelation|safe }} ] ;
+        var paperRelation = [ {{ paperRelation|safe }} ] ;
+        var data = [] ;
+        var links = [] ;
+
+        var data1 = [] ;
+        var links1 = [] ;
+        var data2 = [] ;
+        var links2 = [] ;
+        if(ctx.length == 0){
+            var node = {} ;
+            var url = decodeURI(location.search) ;
+            var str = "";
+            if(url.indexOf("?") != -1){
+                str = url.split("=")[1]
+            }
+            //实体1：待查询的对象
+            node['name'] = str;
+            node['draggable'] = true ;
+            node['category'] = 1 ;
+            node['symbolSize'] = 60 ;
+            var id = 0;
+            node['id'] = id.toString() ;
+            data.push(node) ;
+            // 初始化二级节点
+            data.push({name: "研究领域", draggable: true, category: 3, id: "-1", symbolSize: 80}) ;
+            data.push({name: "所属机构", draggable: true, category: 3, id: "-2", symbolSize: 80}) ;
+            {#data.push({name: "相关人员", draggable: true, category: 3, id: "-3", symbolSize: 80}) ;#}
+            data.push({name: "出版文献", draggable: true, category: 3, id: "-4", symbolSize: 80}) ;
+            {#data.push({name: "论文", draggable: true, category: 3, id: "-5", symbolSize: 80}) ;#}
+            data.push({name: "区域", draggable: true, category: 3, id: "-6", symbolSize: 80}) ;
+
+            // 初始化二级节点与根节点关系
+            links.push({source: 0, target: "-1", category: 0, value: "", symbolSize: 15});
+            links.push({source: 0, target: "-2", category: 0, value: "", symbolSize: 15});
+            {#links.push({source: 0, target: "-3", category: 0, value: "", symbolSize: 15});#}
+            links.push({source: 0, target: "-4", category: 0, value: "", symbolSize: 15});
+            {#links.push({source: 0, target: "-5", category: 0, value: "", symbolSize: 15});#}
+            links.push({source: 0, target: "-6", category: 0, value: "", symbolSize: 15});
+            //实体2：查询并转储到data中，取二者较小的值
+            var maxDisPlayNode = 30 ;
+            for( var i = 0 ;i < Math.min(maxDisPlayNode,entityRelation[0].length) ; i++ ){
+                node = {} ;
+                node['name'] = entityRelation[0][i]['entity2']['name'] ;
+                node['draggable'] = true ;   //是否允许拖拽
+                node['symbol'] = 'rect' ;
+                node['width'] = 70 ;
+                node['height'] = 50 ;
+                //是否URL：区分类型
+                if('url' in entityRelation[0][i]['entity2']){
+                    node['category'] = 1 ;
+                }
+                else{
+                    node['category'] = 1 ;
+                }
+                node['category'] = 0 ;
+                id = i + 1
+                node['id'] = id.toString();
+                var flag = 1 ;
+                relationTarget = id.toString() ;
+                for(var j = 0 ; j<data.length ;j++){
+                    if(data[j]['name'] === node['name']){
+                        flag = 0 ;
+                        relationTarget = data[j]['id']  ;
+                        break ;
+                    }
+                }
+                relation = {}
+                relation['source'] = 0 ;
+                relation['target'] = relationTarget ;
+                relation['category'] = 0 ;
+
+                if(flag === 1){
+                    data.push(node) ;
+                    relation['value'] = entityRelation[0][i]['TYPE(rel)'] ;
+                    if(relation['value'] === 'good_field'){
+                        relation['source'] = '-1' ;
+
+                    }
+                    if(relation['value'] === 'belong'){
+                        relation['source'] = '-2' ;
+
+                    }
+                    //if(relation['value'] === 'cooperation'){
+                    //    relation['source'] = '-3' ;
+                    //}
+                    if(relation['value'] === 'work'){
+                        relation['source'] = '-4' ;
+
+                    }
+                    //if(relation['value'] === 'paper'){
+                    //    relation['source'] = '-5' ;
+                    //}
+                    if(relation['value'] === 'location'){
+                        relation['source'] = '-6' ;
+
+                    }
+
+                    relation['symbolSize'] = 10
+                    links.push(relation) ;
+                }
+                else{
+                    maxDisPlayNode += 1 ;
+                    for(var j = 0; j<links.length ;j++){
+                        if(links[j]['target'] === relationTarget && links[j]['value'] !== entityRelation[0][i]['TYPE(rel)']){
+                            links[j]['value'] = links[j]['value']+" | "+entityRelation[0][i]['TYPE(rel)']
+                            break ;
+                        }
+                    }
+
+                }
+
+            }
+            console.info(data);
+            console.info(links);
+            //基于表格的展示++
+            tableData = []
+            for (var i = 0 ; i < entityRelation[0].length ; i++){
+                relationData = {} ;
+                relationData['entity1'] = str ;
+                relationData['relation'] = entityRelation[0][i]['TYPE(rel)'] ;
+                relationData['entity2'] = entityRelation[0][i]['entity2']['name'] ;
+                tableData.push(relationData) ;
+            }
+            jQuery(function(){
+                $('.table').footable({
+                "columns": [{"name":"entity1",title:"Entity1"} ,
+                          {"name":"relation",title:"Relation"},
+                          {"name":"entity2",title:"Entity2"}],
+                "rows": tableData
+                });
+            });
+            //基于表格的展示--
+
+        }
+
+        if(ctx.length == 0){
+            var node = {} ;
+            var url = decodeURI(location.search) ;
+            var str = "";
+            if(url.indexOf("?") != -1){
+                str = url.split("=")[1]
+            }
+            //实体1：待查询的对象
+            node['name'] = str;
+            node['draggable'] = true ;
+            node['category'] = 1 ;
+            node['symbolSize'] = 60 ;
+            var id = 0;
+            node['id'] = id.toString() ;
+            data1.push(node) ;
+            //实体2：查询并转储到data中，取二者较小的值
+            var maxDisPlayNode = 30 ;
+            for( var i = 0 ;i < Math.min(maxDisPlayNode,cooRelation[0].length) ; i++ ){
+                node = {} ;
+                node['name'] = cooRelation[0][i]['entity2']['name'] ;
+                node['draggable'] = true ;   //是否允许拖拽
+                node['symbol'] = 'rect' ;
+                node['width'] = 70 ;
+                node['height'] = 50 ;
+                //是否URL：区分类型
+                if('url' in cooRelation[0][i]['entity2']){
+                    node['category'] = 1 ;
+                }
+                else{
+                    node['category'] = 1 ;
+                }
+                node['category'] = 0 ;
+                id = i + 1
+                node['id'] = id.toString();
+                var flag = 1 ;
+                relationTarget = id.toString() ;
+                for(var j = 0 ; j<data.length ;j++){
+                    if(data[j]['name'] === node['name']){
+                        flag = 0 ;
+                        relationTarget = data[j]['id']  ;
+                        break ;
+                    }
+                }
+                relation = {}
+                relation['source'] = 0 ;
+                relation['target'] = relationTarget ;
+                relation['category'] = 0 ;
+
+                if(flag === 1){
+                    data1.push(node) ;
+                    relation['value'] = cooRelation[0][i]['TYPE(rel)'] ;
+                    relation['symbolSize'] = 10
+                    links1.push(relation) ;
+                }
+                else{
+                    maxDisPlayNode += 1 ;
+                    for(var j = 0; j<links.length ;j++){
+                        if(links[j]['target'] === relationTarget && links[j]['value'] !== cooRelation[0][i]['TYPE(rel)']){
+                            links[j]['value'] = links[j]['value']+" | "+cooRelation[0][i]['TYPE(rel)']
+                            break ;
+                        }
+                    }
+
+                }
+
+            }
+            console.info(data1);
+            console.info(links1);
+
+        }
+        if(ctx.length == 0){
+            var node = {} ;
+            var url = decodeURI(location.search) ;
+            var str = "";
+            if(url.indexOf("?") != -1){
+                str = url.split("=")[1]
+            }
+            //实体1：待查询的对象
+            node['name'] = str;
+            node['draggable'] = true ;
+            node['category'] = 1 ;
+            node['symbolSize'] = 60 ;
+            var id = 0;
+            node['id'] = id.toString() ;
+            data2.push(node) ;
+            //实体2：查询并转储到data中，取二者较小的值
+            var maxDisPlayNode = 30 ;
+            for( var i = 0 ;i < Math.min(maxDisPlayNode,paperRelation[0].length) ; i++ ){
+                node = {} ;
+                node['name'] = paperRelation[0][i]['entity2']['name'] ;
+                node['draggable'] = true ;   //是否允许拖拽
+                node['symbol'] = 'rect' ;
+                node['width'] = 70 ;
+                node['height'] = 50 ;
+                //是否URL：区分类型
+                if('url' in paperRelation[0][i]['entity2']){
+                    node['category'] = 1 ;
+                }
+                else{
+                    node['category'] = 1 ;
+                }
+                node['category'] = 0 ;
+                id = i + 1
+                node['id'] = id.toString();
+                var flag = 1 ;
+                relationTarget = id.toString() ;
+                for(var j = 0 ; j<data.length ;j++){
+                    if(data[j]['name'] === node['name']){
+                        flag = 0 ;
+                        relationTarget = data[j]['id']  ;
+                        break ;
+                    }
+                }
+                relation = {}
+                relation['source'] = 0 ;
+                relation['target'] = relationTarget ;
+                relation['category'] = 0 ;
+
+                if(flag === 1){
+                    data2.push(node) ;
+                    relation['value'] = paperRelation[0][i]['TYPE(rel)'] ;
+                    relation['symbolSize'] = 10
+                    links2.push(relation) ;
+                }
+                else{
+                    maxDisPlayNode += 1 ;
+                    for(var j = 0; j<links.length ;j++){
+                        if(links[j]['target'] === relationTarget && links[j]['value'] !== paperRelation[0][i]['TYPE(rel)']){
+                            links[j]['value'] = links[j]['value']+" | "+paperRelation[0][i]['TYPE(rel)']
+                            break ;
+                        }
+                    }
+
+                }
+
+            }
+            console.info(data2);
+            console.info(links2);
+
+        }
+        // 基于准备好的数据：Data和Links，设置Echarts参数
+        var myChart = echarts.init(document.getElementById('graph'));
+        var myChart1 = echarts.init(document.getElementById('graph1'));
+        var myChart2 = echarts.init(document.getElementById('graph2'));
+        option = {
+            title: {
+                text: ''
+            },                //标题
+            tooltip: {},                           //提示框配置
+            animationDurationUpdate: 1500,
+            animationEasingUpdate: 'quinticInOut',
+            label: {
+                normal: {
+                    show: true,
+                    textStyle: {
+                        fontSize: 12
+                    },
+
+                }
+            },                          //节点上的标签
+            legend: {
+                x: "center",
+                show: false
+            },
+            series: [
+                {
+                    type: 'graph',                //系列：
+                    layout: 'force',
+                    symbolSize: 45,
+                    focusNodeAdjacency: true,
+                    roam: true,
+                    edgeSymbol: ['none', 'arrow'],
+                    categories: [{
+                        name: 'aa',
+                        itemStyle: {
+                            normal: {
+                                color: "#009800",
+                            }
+                        }
+                    }, {
+                        name: 'bb',
+                        itemStyle: {
+                            normal: {
+                                color: "#4592FF",
+                            }
+                        }
+                    }, {
+                        name: 'cc',
+                        itemStyle: {
+                            normal: {
+                                color: "#C71585",
+                            }
+                        }
+                    }, {
+                        name: 'dd',
+                        itemStyle: {
+                            normal: {
+                                color: "#ff3023",
+                            }
+                        }
+                    }, {
+                        name: 'ee',
+                        itemStyle: {
+                            normal: {
+                                color: "#4592FF",
+                            }
+                        }
+                    }, ],
+                    label: {
+                        normal: {
+                            show: true,
+                            textStyle: {
+                                fontSize: 12,
+                            },
+                        }
+                    },               //节点标签样式
+                    force: {
+                        repulsion: 1000
+                    },
+                    edgeSymbolSize: [4, 50],
+                    edgeLabel: {
+                        normal: {
+                            show: true,
+                            textStyle: {
+                                fontSize: 10
+                            },
+                            formatter: "{c}"
+                        }
+                    },           //边标签样式
+                    data: data,                 //节点
+                    links: links,               //节点间的关系
+                    lineStyle: {
+                        normal: {
+                            opacity: 0.9,
+                            width: 1.3,
+                            curveness: 0,
+                            color:"#262626"
+                        }
+                    }            // 连接线的风格
+                }
+            ]
+        };
+        option1 = {
+            title: {
+                text: ''
+            },                //标题
+            tooltip: {},                           //提示框配置
+            animationDurationUpdate: 1500,
+            animationEasingUpdate: 'quinticInOut',
+            label: {
+                normal: {
+                    show: true,
+                    textStyle: {
+                        fontSize: 12
+                    },
+
+                }
+            },                          //节点上的标签
+            legend: {
+                x: "center",
+                show: false
+            },
+            series: [
+                {
+                    type: 'graph',                //系列：
+                    layout: 'force',
+                    symbolSize: 45,
+                    focusNodeAdjacency: true,
+                    roam: true,
+                    edgeSymbol: ['none', 'arrow'],
+                    categories: [{
+                        name: 'aa',
+                        itemStyle: {
+                            normal: {
+                                color: "#009800",
+                            }
+                        }
+                    }, {
+                        name: 'bb',
+                        itemStyle: {
+                            normal: {
+                                color: "#4592FF",
+                            }
+                        }
+                    }, {
+                        name: 'cc',
+                        itemStyle: {
+                            normal: {
+                                color: "#C71585",
+                            }
+                        }
+                    }, {
+                        name: 'dd',
+                        itemStyle: {
+                            normal: {
+                                color: "#ff3023",
+                            }
+                        }
+                    }, {
+                        name: 'ee',
+                        itemStyle: {
+                            normal: {
+                                color: "#4592FF",
+                            }
+                        }
+                    }, ],
+                    label: {
+                        normal: {
+                            show: true,
+                            textStyle: {
+                                fontSize: 12,
+                            },
+                        }
+                    },               //节点标签样式
+                    force: {
+                        repulsion: 1000
+                    },
+                    edgeSymbolSize: [4, 50],
+                    edgeLabel: {
+                        normal: {
+                            show: true,
+                            textStyle: {
+                                fontSize: 10
+                            },
+                            formatter: "{c}"
+                        }
+                    },           //边标签样式
+                    data: data1,                 //节点
+                    links: links1,               //节点间的关系
+                    lineStyle: {
+                        normal: {
+                            opacity: 0.9,
+                            width: 1.3,
+                            curveness: 0,
+                            color:"#262626"
+                        }
+                    }            // 连接线的风格
+                }
+            ]
+        };
+        option2 = {
+            title: {
+                text: ''
+            },                //标题
+            tooltip: {},                           //提示框配置
+            animationDurationUpdate: 1500,
+            animationEasingUpdate: 'quinticInOut',
+            label: {
+                normal: {
+                    show: true,
+                    textStyle: {
+                        fontSize: 12
+                    },
+
+                }
+            },                          //节点上的标签
+            legend: {
+                x: "center",
+                show: false
+            },
+            series: [
+                {
+                    type: 'graph',                //系列：
+                    layout: 'force',
+                    symbolSize: 45,
+                    focusNodeAdjacency: true,
+                    roam: true,
+                    edgeSymbol: ['none', 'arrow'],
+                    categories: [{
+                        name: 'aa',
+                        itemStyle: {
+                            normal: {
+                                color: "#009800",
+                            }
+                        }
+                    }, {
+                        name: 'bb',
+                        itemStyle: {
+                            normal: {
+                                color: "#4592FF",
+                            }
+                        }
+                    }, {
+                        name: 'cc',
+                        itemStyle: {
+                            normal: {
+                                color: "#C71585",
+                            }
+                        }
+                    }, {
+                        name: 'dd',
+                        itemStyle: {
+                            normal: {
+                                color: "#ff3023",
+                            }
+                        }
+                    }, {
+                        name: 'ee',
+                        itemStyle: {
+                            normal: {
+                                color: "#4592FF",
+                            }
+                        }
+                    }, ],
+                    label: {
+                        normal: {
+                            show: true,
+                            textStyle: {
+                                fontSize: 12,
+                            },
+                        }
+                    },               //节点标签样式
+                    force: {
+                        repulsion: 1000
+                    },
+                    edgeSymbolSize: [4, 50],
+                    edgeLabel: {
+                        normal: {
+                            show: true,
+                            textStyle: {
+                                fontSize: 10
+                            },
+                            formatter: "{c}"
+                        }
+                    },           //边标签样式
+                    data: data2,                 //节点
+                    links: links2,               //节点间的关系
+                    lineStyle: {
+                        normal: {
+                            opacity: 0.9,
+                            width: 1.3,
+                            curveness: 0,
+                            color:"#262626"
+                        }
+                    }            // 连接线的风格
+                }
+            ]
+        };
+        myChart.setOption(option);
+        myChart1.setOption(option1);
+        myChart2.setOption(option2);
+</script>
+{% endif %}
+
+{% endblock %}

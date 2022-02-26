@@ -1,0 +1,28 @@
+{% extends "navigate.html" %} {% block mainbody %}
+
+<div class="container" style="padding: 200px ;margin: 0 auto;">
+    <div class="row">
+        <div class="col-md-12">
+            <!--overview start-->
+            <section class="panel panel-default">
+              <!--   <header class="panel-heading">
+                    请输入专家姓名 :
+                </header> -->
+                <div class="panel-body">
+                    <!--搜索框-->
+                    <form method = "get" id = 'searchEntityForm' action="search_entity">
+                        <div >
+                            <div class="input-group">
+                                <input type="text" id = "user_text" name = "user_text" class="form-control" placeholder="请输入专家姓名" value="{{ user_text|safe }}" aria-describedby="basic-addon1">
+                                <span class="btn btn-primary input-group-addon" type="button" id="relationSearchButton" style="background-color:#4592fe ; padding:6px 38px" onclick="document.getElementById('searchEntityForm').submit();">查询</span>
+                             </div>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}
